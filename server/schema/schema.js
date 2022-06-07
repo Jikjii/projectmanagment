@@ -10,6 +10,7 @@ const {
   GraphQLString,
   GraphQLSchema,
   GraphQLList,
+  GraphQLNonNull,
 } = require("graphql");
 
 // Creating Project Type
@@ -72,6 +73,44 @@ const RootQuery = new GraphQLObjectType({
   },
 });
 
+// Mutations
+
+const mutation = new GraphQLObjectType({
+  name: "Mutation",
+  fields: {
+    // Add a client
+    addClient: {
+      type: ClientType,
+      args: {
+        name: { type: GraphQLNonNull(GraphQLString) },
+        email: { type: GraphQLNonNull(GraphQLString) },
+        phone: { type: GraphQLNonNull(GraphQLString) },
+      },
+      resolve(parent, args) {
+        //creates a new client using the mongoose model
+        const client = new Client({
+          // passing all the key values - that come from the graphql query
+          name: args.name,
+          email: args.email,
+          phone: args.phone,
+        }); // information coming from the frontend form will be saved
+        return client.save();
+      },
+    },
+    // Delete
+    deleteClient: {
+      type: ClientType,
+      args: {
+        id: { type: GraphQLNonNull(GraphQLID) },
+      },
+      resolve(parent, args) {
+        return Client.findByIdAndRemove(args.id);
+      },
+    },
+  },
+});
+
 module.exports = new GraphQLSchema({
   query: RootQuery,
+  mutation,
 });
