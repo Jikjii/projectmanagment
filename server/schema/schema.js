@@ -1,6 +1,3 @@
-const { projects, clients } = require("../sampleData.js");
-
-// Mongoose models
 const Project = require("../models/Project");
 const Client = require("../models/Client");
 
@@ -14,7 +11,7 @@ const {
   GraphQLEnumType,
 } = require("graphql");
 
-// Creating Project Type
+// Project Type
 const ProjectType = new GraphQLObjectType({
   name: "Project",
   fields: () => ({
@@ -31,7 +28,7 @@ const ProjectType = new GraphQLObjectType({
   }),
 });
 
-// Creating client type
+// Client Type
 const ClientType = new GraphQLObjectType({
   name: "Client",
   fields: () => ({
@@ -47,27 +44,27 @@ const RootQuery = new GraphQLObjectType({
   fields: {
     projects: {
       type: new GraphQLList(ProjectType),
-      resolve(patent, args) {
+      resolve(parent, args) {
         return Project.find();
       },
     },
     project: {
       type: ProjectType,
       args: { id: { type: GraphQLID } },
-      resolve(parentValue, args) {
+      resolve(parent, args) {
         return Project.findById(args.id);
       },
     },
     clients: {
       type: new GraphQLList(ClientType),
-      resolve(patent, args) {
+      resolve(parent, args) {
         return Client.find();
       },
     },
     client: {
       type: ClientType,
       args: { id: { type: GraphQLID } },
-      resolve(parentValue, args) {
+      resolve(parent, args) {
         return Client.findById(args.id);
       },
     },
@@ -75,7 +72,6 @@ const RootQuery = new GraphQLObjectType({
 });
 
 // Mutations
-
 const mutation = new GraphQLObjectType({
   name: "Mutation",
   fields: {
@@ -88,23 +84,28 @@ const mutation = new GraphQLObjectType({
         phone: { type: GraphQLNonNull(GraphQLString) },
       },
       resolve(parent, args) {
-        //creates a new client using the mongoose model
         const client = new Client({
-          // passing all the key values - that come from the graphql query
           name: args.name,
           email: args.email,
           phone: args.phone,
-        }); // information coming from the frontend form will be saved
+        });
+
         return client.save();
       },
     },
-    // Delete
+    // Delete a client
     deleteClient: {
       type: ClientType,
       args: {
         id: { type: GraphQLNonNull(GraphQLID) },
       },
       resolve(parent, args) {
+        Project.find({ clientId: args.id }).then((projects) => {
+          projects.forEach((project) => {
+            project.remove();
+          });
+        });
+
         return Client.findByIdAndRemove(args.id);
       },
     },
@@ -134,6 +135,7 @@ const mutation = new GraphQLObjectType({
           status: args.status,
           clientId: args.clientId,
         });
+
         return project.save();
       },
     },
@@ -141,7 +143,7 @@ const mutation = new GraphQLObjectType({
     deleteProject: {
       type: ProjectType,
       args: {
-        id: { type: GraphQLNonNull(GraphQLString) },
+        id: { type: GraphQLNonNull(GraphQLID) },
       },
       resolve(parent, args) {
         return Project.findByIdAndRemove(args.id);
@@ -151,7 +153,7 @@ const mutation = new GraphQLObjectType({
     updateProject: {
       type: ProjectType,
       args: {
-        id: { type: GraphQLNonNull(GraphQLString) },
+        id: { type: GraphQLNonNull(GraphQLID) },
         name: { type: GraphQLString },
         description: { type: GraphQLString },
         status: {
@@ -166,9 +168,7 @@ const mutation = new GraphQLObjectType({
         },
       },
       resolve(parent, args) {
-        // resolve takes in the id of what we want to update
         return Project.findByIdAndUpdate(
-          // and sets the values to the new args value
           args.id,
           {
             $set: {
@@ -177,7 +177,7 @@ const mutation = new GraphQLObjectType({
               status: args.status,
             },
           },
-          { new: true } // this basically sttes that if the project is not there then it will create a new project
+          { new: true }
         );
       },
     },
